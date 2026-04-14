@@ -1,0 +1,5 @@
+templates/research.local.env
+*.pyc
+__pycache__/
+.env
+.env.*
