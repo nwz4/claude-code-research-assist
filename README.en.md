@@ -1,37 +1,44 @@
 # research-assist
 
-Unified Claude Code skill for paper discovery, research thinking, method comparison, claim verification, and Playwright-assisted academic source collection.
+Unified Claude Code skill for **paper discovery, research thinking, method comparison, and claim verification**.
 
-中文首页：[`README.md`](./README.md)
+Chinese homepage: [`README.md`](./README.md)
 
-## What it does
+## At a glance
 
-`research-assist` is a single core skill for research workflows. It covers four common use cases with one reusable foundation:
+`research-assist` is not just a paper search tool. It is an **evidence-first research workflow** built around four common use cases:
 
-- **paper-search**: discover papers, surveys, benchmarks, project pages, and code
-- **research-think**: brainstorm ideas, identify open questions, and propose next queries
-- **paper-compare**: compare methods, assumptions, datasets, metrics, and conclusions
-- **claim-verify**: verify whether a claim is supported, partially supported, or still unverified
+| Mode | What it helps with | Typical output |
+| --- | --- | --- |
+| `paper-search` | find papers, surveys, benchmarks, project pages, code | reading list, source links, supporting resources |
+| `research-think` | brainstorm ideas, decompose directions, plan next searches | candidate ideas, open problems, next queries |
+| `paper-compare` | compare methods, assumptions, datasets, metrics, conclusions | differences, trade-offs, disagreement points |
+| `claim-verify` | verify whether a claim holds | supported / partial / unverified |
 
-It uses a **dual-lane workflow**:
+## Why this skill is useful
+
+- **One entry point** for search, comparison, ideation, and verification
+- **Evidence first**: conclusions should carry URLs whenever possible
+- **Dual-lane design**: search lane gathers evidence, Grok lane synthesizes and fills gaps
+- **Restricted sites are still workable**: Playwright fallback can help with IEEE / ACM / Springer / ScienceDirect
+
+## How it works
 
 ### 1. Search evidence lane
-- discover sources through Exa / Tavily / WebSearch
-- collect URL-first evidence
-- deduplicate and prioritize sources
+- discover sources with Exa / Tavily / WebSearch
+- organize findings around URLs
+- deduplicate, aggregate, and prioritize sources
 
 ### 2. Grok synthesis lane
 - run query expansion
 - produce claims / disagreements / next_queries
-- support comparison and hypothesis generation
-
-When public pages are insufficient, the workflow can also produce **Playwright fallback** hints for restricted academic sites such as IEEE, ACM, Springer, and ScienceDirect.
+- support comparison, summarization, and hypothesis generation
 
 ## What you must configure yourself
 
-This repository does **not** ship with usable API credentials, browser login state, or remote bridge services. To enable the enhanced workflow, you must configure the following items yourself:
+This repository does **not** ship with usable credentials, login state, or remote bridge services. To enable the enhanced workflow, you must prepare the following items yourself:
 
-### Required for local aggregation
+### Required
 - `EXA_API_KEY`
 - `TAVILY_API_KEY`
 
@@ -44,11 +51,11 @@ This repository does **not** ship with usable API credentials, browser login sta
 - a local Playwright-capable browser environment
 - your own login session for IEEE / ACM / Springer / ScienceDirect when needed
 
-### Optional but recommended
+### Recommended
 - Python 3 available as `python3`
 - a private local config file copied from `templates/research.env.example`, such as `templates/research.local.env`
 
-## How Grok access works in this project
+## How Grok access works here
 
 This project does **not** call a native official Grok API directly.
 
@@ -57,14 +64,93 @@ Instead, Grok access is expected to come from **Grok2API**, used as an OpenAI-co
 Reference:
 - https://github.com/chenyme/grok2api
 
-In practice, that means:
-- you run or provide a Grok2API service yourself
+That means:
+- you deploy or provide a Grok2API service yourself
 - `research-assist` talks to that service through OpenAI-style endpoints
 - the backend mainly uses:
   - `GET /v1/models`
   - `POST /v1/chat/completions`
 
-If you do not deploy Grok2API yourself, Grok-related modes will not work.
+If you do not deploy Grok2API yourself:
+- Exa / Tavily / WebSearch / WebFetch / Playwright can still be used
+- but Grok-related modes will not work
+
+## Quick start in 3 steps
+
+### 1) Copy the config template
+
+```bash
+cp "research-assist/templates/research.env.example" "research-assist/templates/research.local.env"
+```
+
+### 2) Fill in your own config
+
+Main variables:
+- `EXA_API_KEY`
+- `TAVILY_API_KEY`
+- `GROK_BRIDGE_BASE_URL`
+- `GROK_BRIDGE_API_KEY`
+- `GROK_BRIDGE_MODEL=auto`
+
+### 3) Run one aggregation
+
+```bash
+python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
+  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
+  --query "multimodal retrieval augmented generation survey" \
+  --max-results 5
+```
+
+## Common examples
+
+### Check CLI help
+
+```bash
+python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" --help
+```
+
+### Idea generation
+
+```bash
+python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
+  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
+  --mode think-idea \
+  --query "efficient multimodal rag for long documents" \
+  --max-results 5
+```
+
+### Method comparison
+
+```bash
+python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
+  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
+  --mode think-compare \
+  --query "AAA interpolation for electromagnetics" \
+  --compare-target "vector fitting" \
+  --max-results 5
+```
+
+### Claim verification
+
+```bash
+python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
+  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
+  --mode think-verify \
+  --query "multimodal RAG reliability" \
+  --max-results 5
+```
+
+## Output highlights
+
+The backend uses an evidence-first schema, including fields such as:
+
+- `results`
+- `lanes.search_lane.evidence`
+- `lanes.search_lane.playwright_hints`
+- `lanes.grok_lane.claims`
+- `synthesis.validated_claims`
+- `synthesis.disagreements`
+- `synthesis.next_queries`
 
 ## Repository layout
 
@@ -91,86 +177,6 @@ research-assist/
    └─ source-priority.md
 ```
 
-## Setup
-
-Copy the example env file and fill in your own local configuration:
-
-```bash
-cp "research-assist/templates/research.env.example" "research-assist/templates/research.local.env"
-```
-
-Main variables:
-- `EXA_API_KEY`
-- `TAVILY_API_KEY`
-- `GROK_BRIDGE_BASE_URL`
-- `GROK_BRIDGE_API_KEY`
-- `GROK_BRIDGE_MODEL=auto`
-
-See:
-- `research-assist/references/api-setup.md`
-- `research-assist/references/grok-bridge.md`
-- `research-assist/templates/api-config-template.md`
-
-## Usage examples
-
-### Check CLI help
-
-```bash
-python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" --help
-```
-
-### Aggregate mode
-
-```bash
-python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
-  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
-  --query "multimodal retrieval augmented generation survey" \
-  --max-results 5
-```
-
-### Think mode: idea generation
-
-```bash
-python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
-  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
-  --mode think-idea \
-  --query "efficient multimodal rag for long documents" \
-  --max-results 5
-```
-
-### Think mode: comparison
-
-```bash
-python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
-  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
-  --mode think-compare \
-  --query "AAA interpolation for electromagnetics" \
-  --compare-target "vector fitting" \
-  --max-results 5
-```
-
-### Think mode: verification
-
-```bash
-python3 "C:/Users/Admin/.cc-switch/skills/research-assist/scripts/research_aggregate.py" \
-  --env-file "C:/Users/Admin/.cc-switch/skills/research-assist/templates/research.local.env" \
-  --mode think-verify \
-  --query "multimodal RAG reliability" \
-  --max-results 5
-```
-
-## Output model
-
-The backend uses an evidence-first schema, including fields such as:
-
-- `results`
-- `lanes.search_lane.evidence`
-- `lanes.search_lane.playwright_hints`
-- `lanes.grok_lane.claims`
-- `synthesis.validated_claims`
-- `synthesis.disagreements`
-- `synthesis.next_queries`
-
 ## What to publish
 
 Publish:
@@ -194,9 +200,16 @@ Publish:
 Do **not** publish:
 - `research-assist/templates/research.local.env`
 
-## Notes
+## Further reading
 
-- Grok is used for synthesis, not as a substitute for formal sources.
-- Grok access in this repository is expected to come from a **Grok2API** bridge, not direct native Grok API usage.
-- Claims should be checked against URL-backed evidence whenever possible.
-- Playwright is intended as a targeted fallback for restricted academic sites.
+See also:
+- `references/api-setup.md`
+- `references/grok-bridge.md`
+- `references/dedup-rules.md`
+- `references/login-fallback.md`
+- `references/source-priority.md`
+- `references/research-report-template.md`
+
+## One-line summary
+
+> A unified, reusable, publishable research skill that brings source discovery, evidence organization, method comparison, idea expansion, claim verification, and restricted-site fallback into one workflow.
